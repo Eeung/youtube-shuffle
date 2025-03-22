@@ -8,6 +8,9 @@ body {
     user-select:none;
     background-color: var(--color-gray-100);
 }
+iframe {
+    border-radius: 1rem;
+}
 
 .material-symbols-outlined {
   font-variation-settings:
@@ -23,6 +26,7 @@ body {
 
 .ytplayer {
     max-width: 800px;
+    max-height: 450px;
 }
 
 .playground {
