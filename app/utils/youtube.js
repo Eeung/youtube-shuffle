@@ -22,6 +22,7 @@ export async function getPlaylistVideos(playlistId) {
         const items = response.data.items.map((item) => ({
           videoId: item.snippet.resourceId.videoId,
           title: item.snippet.title,
+          channelTitle: item.snippet.videoOwnerChannelTitle
         }));
   
         videos = [...videos, ...items];

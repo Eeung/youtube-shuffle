@@ -1,2 +1,30 @@
 @import "tailwindcss";
 @tailwind utilities;
+
+body {
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+    background-color: var(--color-gray-100);
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+  'FILL' 0,
+  'wght' 400,
+  'GRAD' 0,
+  'opsz' 32
+}
+
+.url-input {
+    width: calc(100vw - 475px);
+}
+
+.ytplayer {
+    max-width: 800px;
+}
+
+.playground {
+    height: calc(100vh - 64px);
+}
