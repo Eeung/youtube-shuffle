@@ -2,56 +2,63 @@
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from "react";
 import ReactPlayer from 'react-player/youtube'
-import { VideoData } from "@/utils/youtube";
+import { videos, getPlaylistVideos } from "@/utils/youtube";
+import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData } from '@/utils/storage'
 
 export default function PlayerPage() {
   const searchParams = useSearchParams()
-  const listIDParam = searchParams.get('list')
-  const [videos, setVideos] = useState<VideoData[]>([])
+  const listIDParam = searchParams.get('list') ?? ""
+  const [videoIndexes, setVideoIndexes] = useState<number[]>([])
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const playerRef = useRef<ReactPlayer | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
 
+  // 처음 접속하면 실행
   useEffect(() => {
     if (!listIDParam) return
 
-    const listId = decodeURIComponent(listIDParam)
-    const saved = localStorage.getItem(listId)
-    if (!saved) return
+    const data = getPlaylistData("master", listIDParam)
+    if(data) {
+      if(videos.length === 0) {
+        LoadPlaylist(data, true)
+      } else {
+        LoadPlaylist(data, false)
+      }
+      return
+    }
+
     try {
-      const shuffeledVideos = shuffleArray( JSON.parse(saved) )
-      setVideos(shuffeledVideos)
+      const shuffeledVideos = shuffleArray( videos.length )
+      setVideoIndexes(shuffeledVideos)
     } catch (err) {
       console.error('파싱 오류', err)
     }
   }, [listIDParam])
 
   // Shuffle 알고리즘
-  const shuffleArray = (array: VideoData[]): VideoData[] => {
-    const shuffled = [...array]
-    for (let i = shuffled.length - 1; i > 0; i--) {
+  const shuffleArray = (size: number): number[] => {
+    const shuffled : number[] = [...Array(videos.length).keys()]
+
+    for (let i = size - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
+    saveShuffledSequence("master", listIDParam, shuffled)
     return shuffled
+  }
+
+  const LoadPlaylist = async (data : PlaylistData, doGetVideos : boolean) => {
+    if(doGetVideos) await getPlaylistVideos(listIDParam)
+    setVideoIndexes(data.shuffledSequence)
+    setCurrentIndex(data.lastPlayed)
   }
 
   // 영상 끝나면 다음 영상으로
   const handleEnded = () => {
-    const next = (currentIndex + 1) % videos.length
+    const next = (currentIndex + 1) % videoIndexes.length
     setCurrentIndex(next)
   }
-
-  // 재생곡 변경 시 리스트 스크롤 맞추기
-  useEffect(() => {
-    const list = listRef.current
-    if (!list) return
-    const activeItem = list.children[currentIndex] as HTMLElement
-    if (activeItem) {
-      activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }, [currentIndex])
 
   // 영상 재시작
   const restartCurrentVideo = () => {
@@ -60,14 +67,27 @@ export default function PlayerPage() {
     }
   };
 
-  //동적 타이틀
+  // 인덱스 바뀔 때,
   useEffect(() => {
-    if (videos.length > 0) {
-      document.title = `${videos[currentIndex].title} - Playlist Shuffle`
+
+    // 재생 중 인덱스 출력
+    setTimeout(()=>saveLastPlayedIndex("master", listIDParam, currentIndex),0)
+
+    // 동적 타이틀
+    if (videoIndexes.length > 0) {
+      document.title = `${videos[videoIndexes[currentIndex]].title} - Playlist Shuffle`
     } else {
-      document.title = 'YouTube Playlist Shuffle'
+      document.title = 'Playlist Shuffle'
     }
-  }, [videos, currentIndex])
+
+    // 리스트 스크롤 맞추기
+    const list = listRef.current
+    if (!list) return
+    const activeItem = list.children[currentIndex] as HTMLElement
+    if (activeItem) {
+      activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [videoIndexes, currentIndex])
 
   //빈응형
   useEffect(() => {
@@ -103,22 +123,23 @@ export default function PlayerPage() {
 
   return (
     <div className="w-screen h-screen">
-      <div className="flex justify-between py-2.5 px-3.5 border-b-2">
+      <nav className="flex justify-between py-2.5 px-3.5 border-b-2">
         <h1 className="text-3xl font-bold hover:underline">YouTube Playlist Shuffle</h1>
-      </div>
+      </nav>
       <div className = "flex justify-center items-center playground w-screen">
-        {videos.length > 0 &&
+        {videoIndexes.length > 0 ? (
           <div className="bg-gray-300 w-5/6 h-11/12 p-4 rounded-2xl max-w-7xl">
             <div className="player flex flex-col items-center justify-center h-1/2">
               {/* 유튜브 영상 재생 */}
               <ReactPlayer
                 ref={playerRef}
-                url={`https://www.youtube.com/watch?v=${videos[currentIndex].videoId}`}
+                url={`https://www.youtube.com/watch?v=${videos[videoIndexes[currentIndex]].videoId}`}
                 playing={isPlaying}
                 controls
                 onEnded={handleEnded}
                 onPause={() => setIsPlaying(false)}
                 onPlay={() => setIsPlaying(true)}
+                onReady={() => setIsPlaying(true)}
                 width="91.6%"
                 height="83.2%"
                 className='ytplayer'
@@ -144,7 +165,7 @@ export default function PlayerPage() {
                   <span className="material-symbols-outlined">{isPlaying ? "pause_circle" : "play_circle"}</span>
                 </div>
                 <div
-                  onClick={() => setCurrentIndex(currentIndex<videos.length-1? currentIndex+1 : videos.length-1)}
+                  onClick={() => setCurrentIndex(currentIndex<videoIndexes.length-1? currentIndex+1 : videoIndexes.length-1)}
                   className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
                 >
                   <span className="material-symbols-outlined">arrow_circle_right</span>
@@ -157,7 +178,7 @@ export default function PlayerPage() {
                 ref={listRef}
                 className="w-11/12 h-full overflow-auto border rounded-lg p-2 bg-white shadow"
               >
-                {videos.map((video, index) => {
+                {videoIndexes.map((video, index) => {
                   return (
                     <li
                       key={index}
@@ -173,17 +194,19 @@ export default function PlayerPage() {
                         }
                       }}
                     >
-                      <div className="text-lg">{video.title}</div>
-                      <div className="text-sm text-gray-500">{video.channelTitle}</div>
+                      <div className="text-lg">{videos[video].title}</div>
+                      <div className="text-sm text-gray-500">{videos[video].channelTitle}</div>
                     </li>
                   );
                 })}
               </ul>
               <div className="flex justify-end w-11/12">
-                <p className = "font-bold text-lg">{currentIndex+1}/{videos.length}</p>
+                <p className = "font-bold text-lg">{currentIndex+1}/{videoIndexes.length}</p>
               </div>
             </div>
           </div>
+        ) :
+          <p>잠시만 기다려 주세요.</p>
         }
       </div>
     </div>

@@ -6,14 +6,37 @@ export interface VideoData {
   channelTitle: string
 }
 
-export async function getPlaylistVideos(playlistId: string): Promise<VideoData[]> {
-  const apiKey = API_KEY
+export interface listData {
+  id : string
+  title : string
+  description : string
+}
+export let videos : VideoData[] = []
+export let playlist : listData
+
+export async function getPlaylistMeta(playlistId: string) {
+  const url = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
+
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('플레이리스트 정보를 가져오지 못했습니다.')
+
+  const data = await res.json()
+  const item = data.items?.[0]
+  if (!item) throw new Error('플레이리스트가 존재하지 않습니다.')
+
+  playlist = {
+    id: playlistId,
+    title: item.snippet.title,
+    description: item.snippet.description
+  }
+}
+
+export async function getPlaylistVideos(playlistId: string) {
   const maxResults = 50
-  const videos: VideoData[] = []
   let nextPageToken = ''
 
   while (videos.length < 500) {
-    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${maxResults}&playlistId=${playlistId}&key=${apiKey}&pageToken=${nextPageToken}`
+    const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${maxResults}&playlistId=${playlistId}&key=${API_KEY}&pageToken=${nextPageToken}`
     const res = await fetch(url)
     const data = await res.json()
 
@@ -27,7 +50,7 @@ export async function getPlaylistVideos(playlistId: string): Promise<VideoData[]
         return {
           videoId: snippet.resourceId.videoId,
           title: snippet.title,
-          channelTitle: snippet.videoOwnerChannelTitle || snippet.channelTitle || '채널 없음',
+          channelTitle: snippet.videoOwnerChannelTitle || snippet.channelTitle || '채널 없음'
         } as VideoData
       })
       .filter(Boolean)
@@ -37,6 +60,4 @@ export async function getPlaylistVideos(playlistId: string): Promise<VideoData[]
     if (!data.nextPageToken) break
     nextPageToken = data.nextPageToken
   }
-
-  return videos
 }

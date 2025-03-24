@@ -1,0 +1,30 @@
+{
+    "master": {
+        "playlists": {
+            "PL123456789": {
+                "title": "Lo-fi 공부용",
+                "description": "집중할 때 듣는 음악",
+                "lastPlayed": 4,
+                "shuffledSequence": [3, 5, 0, 4, 6, 2, 1],
+                "coupling": [[2, 3], [5, 6]]
+            }
+        },
+        "combined": {
+            "집중 믹스": {
+                "sources": ["PL123456789", "PL987654321"]
+            }
+        }
+    },
+    "user1":{
+        "playlists": {
+            "any_playlistID": {
+               "repeat" : "repeat"
+            }
+        },
+        "combined": {
+            "any_Combined Title": {
+                "repeat": ["repeat", "repeat"]
+            }
+        }
+    }
+}

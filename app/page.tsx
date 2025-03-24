@@ -1,17 +1,18 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getPlaylistVideos, VideoData } from '@/utils/youtube'
+import { getPlaylistVideos, getPlaylistMeta, videos, playlist } from '@/utils/youtube'
 import { useRouter } from 'next/navigation'
+import { savePlaylistMeta } from './utils/storage'
 
 export default function EditPage() {
   const [url, setUrl] = useState('')
-  const [videos, setVideos] = useState<VideoData[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [playlistId, setPlaylistId] = useState<string>("")
   const inputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
 
+  // 재생목록의 정보를 가져오기
   const handleLoadPlaylist = async () => {
     try {
       const listId = new URL(url).searchParams.get('list')
@@ -20,8 +21,10 @@ export default function EditPage() {
 
       setPlaylistId(listId)
       setLoading(true)
-      const result = await getPlaylistVideos(listId)
-      setVideos(result)
+      await getPlaylistMeta(listId)
+      savePlaylistMeta("master", listId, playlist.title, playlist.description)
+
+      await getPlaylistVideos(listId)
     } catch (err) {
       alert('올바른 URL이 아닙니다.')
     } finally {
@@ -29,24 +32,25 @@ export default function EditPage() {
     }
   }
 
+  // 영상 플레이어로 이동
   const handleStartPlay = () => {
-    localStorage.setItem(playlistId, JSON.stringify(videos))
     router.push(`/play?list=${playlistId}`)
   }
 
+  // 처음 접속 때, 링크 입력칸 포커스
   useEffect(() => {
     inputRef.current?.focus()
   },[])
 
   return (
     <div className="h-screen w-screen">
-      <div className="flex justify-between py-2.5 px-3.5 border-b-2">
+      <nav className="flex justify-between py-2.5 px-3.5 border-b-2">
         <h1 className="text-3xl font-bold hover:underline">YouTube Playlist Shuffle</h1>
-      </div>
+      </nav>
       <div className = "flex flex-col justify-center items-center playground w-screen">
         <div className="bg-gray-300 w-5/6 h-11/12 p-4 rounded-2xl max-w-7xl">
           <div className="flex justify-between w-full pb-4 border-b-2 mb-4">
-            <div className="w-11/12">
+            <div className="url-input">
               <input
                 ref={inputRef}
                 type="text"
