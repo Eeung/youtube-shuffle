@@ -1,5 +1,3 @@
-import { BlobOptions } from "buffer";
-
 const API_KEY = "AIzaSyD1ke6FFlpLgjTYgy5PAq8nPMhCtnRIivs"; // youtube api key
 
 export interface VideoData {
@@ -12,12 +10,18 @@ export interface listData {
   id : string
   title : string
   description : string
+  thumbnail: string
 }
 export let videos : VideoData[] = []
-export let playlist : listData
+export let playlist : listData = {
+  id : "",
+  title : "",
+  description : "",
+  thumbnail: "",
+}
 const inFlightFetches: Record<string, Promise<boolean> | undefined> = {};
 
-export async function getPlaylistMeta(playlistId: string) {
+export async function getPlaylistMeta(playlistId: string) : Promise<listData> {
   const url = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
 
   const res = await fetch(url)
@@ -27,10 +31,11 @@ export async function getPlaylistMeta(playlistId: string) {
   const item = data.items?.[0]
   if (!item) throw new Error('플레이리스트가 존재하지 않습니다.')
 
-  playlist = {
+  return playlist = {
     id: playlistId,
     title: item.snippet.title,
-    description: item.snippet.description
+    description: item.snippet.description,
+    thumbnail: item.snippet.thumbnails.default.url
   }
 }
 
@@ -50,7 +55,7 @@ export function getPlaylistVideosOnce(listId: string): Promise<boolean> {
 async function getPlaylistVideos(playlistId: string) : Promise<boolean>{
   const maxResults = 50
   let nextPageToken = ''
-  const fetchedVideos : VideoData[] = []
+  videos = []
 
   while (true) {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${maxResults}&playlistId=${playlistId}&key=${API_KEY}&pageToken=${nextPageToken}`

@@ -60,7 +60,7 @@ export default function PlayerPage() {
     if (playerRef.current) {
       playerRef.current.seekTo(0, 'seconds')
     }
-  };
+  }
 
   // 인덱스 바뀔 때,
   useEffect(() => {
@@ -84,52 +84,20 @@ export default function PlayerPage() {
     }
   }, [videoIndexes, currentIndex])
 
-  //빈응형
-  useEffect(() => {
-    const checkHeight = () => {
-      const player = document.getElementsByClassName("ytplayer")[0] as HTMLElement | undefined
-    if (!player) return
-
-    const height = player.parentElement?.parentElement?.offsetHeight || 0
-    const playerDiv = document.getElementsByClassName("player")[0] as HTMLElement | undefined
-    const listDiv = document.getElementsByClassName("list")[0] as HTMLElement | undefined
-
-    if (!playerDiv || !listDiv) return
-      if(height<530){
-        player.classList.add("hidden")
-        playerDiv.classList.remove("h-1/2")
-        listDiv.classList.remove("h-1/2")
-        listDiv.classList.add("h-11/12")
-      } else {
-        player.classList.remove("hidden")
-        playerDiv.classList.add("h-1/2")
-        listDiv.classList.add("h-1/2")
-        listDiv.classList.remove("h-11/12")
-      }
-    };
-
-    setTimeout(checkHeight, 0);
-    window.addEventListener("resize", checkHeight) // 창 크기 바뀌면 재측정
-
-    return () => {
-      window.removeEventListener("resize", checkHeight)
-    };
-  }, []);
-
   return (
-    <div className="w-screen h-screen">
-      <nav className="flex justify-between py-2.5 px-3.5 border-b-2">
+    <div className="flex flex-col w-screen h-screen">
+      <nav className="flex w-full justify-between py-2.5 px-3.5 border-b-2">
         <h1 
-          className="text-3xl font-bold hover:underline"
+          className="text-xl sm:text-3xl font-bold hover:underline"
           onClick={() => router.push('/')}
         >
-          YouTube Playlist Shuffle
+          <span className="hidden sm:inline">YouTube </span>Playlist Shuffle
           </h1>
       </nav>
-      <div className = "flex justify-center items-center playground w-screen">
+      <section className = "flex grow justify-center items-center w-screen h-px">
         {videoIndexes.length > 0 ? (
-          <div className="bg-gray-300 w-5/6 h-11/12 p-4 rounded-2xl max-w-7xl">
-            <div className="player flex flex-col items-center justify-center h-1/2">
+          <article className="flex flex-col bg-gray-300 w-5/6 h-11/12 px-4 rounded-2xl max-w-7xl">
+            <section className="player flex flex-col items-center justify-center">
               {/* 유튜브 영상 재생 */}
               <ReactPlayer
                 ref={playerRef}
@@ -142,10 +110,10 @@ export default function PlayerPage() {
                 onReady={() => setIsPlaying(true)}
                 width="91.6%"
                 height="83.2%"
-                className='ytplayer'
+                className='ytplayer mb-1.5'
               />
               {/* 미디어 버튼 그룹 */}
-              <div className="flex gap-2 mt-1.5">
+              <footer className="flex gap-2">
                 <div
                   onClick={() => {
                     if (currentIndex === 0) {
@@ -186,13 +154,13 @@ export default function PlayerPage() {
                 >
                   <span className="material-symbols-outlined">shuffle</span>
                 </div>
-              </div>
-            </div>
-            <div className="list flex flex-col items-center justify-center h-1/2">
+              </footer>
+            </section>
+            <section className="list flex flex-col items-center justify-center h-1/2">
               {/* 재생목록 */}
               <ul
                 ref={listRef}
-                className="w-11/12 h-full overflow-auto border rounded-lg p-2 bg-white shadow"
+                className="w-11/12 h-px grow overflow-auto overflow-x-hidden border rounded-lg p-2 bg-white shadow"
               >
                 {videoIndexes.map((video, index) => {
                   return (
@@ -216,15 +184,15 @@ export default function PlayerPage() {
                   );
                 })}
               </ul>
-              <div className="flex justify-end w-11/12">
+              <footer className="flex justify-end w-11/12">
                 <p className = "font-bold text-lg">{currentIndex+1}/{videoIndexes.length}</p>
-              </div>
-            </div>
-          </div>
+              </footer>
+            </section>
+          </article>
         ) :
           <p>잠시만 기다려 주세요.</p>
         }
-      </div>
+      </section>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 export type PlaylistData = {
     title: string
     description: string
+    thumbnail: string
     lastPlayed: number
     shuffledSequence: number[]
     chains: number[][]
@@ -63,13 +64,15 @@ export function savePlaylistMeta(
     userId: string,
     playlistId: string,
     title: string,
-    description: string
+    description: string,
+    thumbnail: string
 ) {
     if(playlistId == "") return
     const user = getUserData(userId)
     user.playlists[playlistId] ??= {
         title,
         description,
+        thumbnail,
         lastPlayed: 0,
         shuffledSequence: [],
         chains: [],
