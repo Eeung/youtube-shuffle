@@ -1,15 +1,21 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { getPlaylistVideos, getPlaylistMeta, videos, playlist } from '@/utils/youtube'
+import { getPlaylistVideosOnce, getPlaylistMeta, videos, playlist, resetVideos } from '@/utils/youtube'
 import { useRouter } from 'next/navigation'
-import { savePlaylistMeta } from './utils/storage'
+import { savePlaylistMeta, getPlaylistData, getAllPlaylists, deletePlaylistData } from './utils/storage'
+
+type StoredPlaylist = {
+  title: string
+  description: string
+}
 
 export default function EditPage() {
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState<boolean>(false)
   const [playlistId, setPlaylistId] = useState<string>("")
   const inputRef = useRef<HTMLInputElement | null>(null)
+  const [storedPlaylists, setStoredPlaylists] = useState<Record<string, StoredPlaylist>>({})
   const router = useRouter()
 
   // 재생목록의 정보를 가져오기
@@ -21,10 +27,14 @@ export default function EditPage() {
 
       setPlaylistId(listId)
       setLoading(true)
-      await getPlaylistMeta(listId)
-      savePlaylistMeta("master", listId, playlist.title, playlist.description)
 
-      await getPlaylistVideos(listId)
+      const data = getPlaylistData("master", listId)
+      if(!data){
+        await getPlaylistMeta(listId)
+        savePlaylistMeta("master", listId, playlist.title, playlist.description)
+      }
+
+      await getPlaylistVideosOnce(listId)
     } catch (err) {
       alert('올바른 URL이 아닙니다.')
     } finally {
@@ -33,13 +43,19 @@ export default function EditPage() {
   }
 
   // 영상 플레이어로 이동
-  const handleStartPlay = () => {
-    router.push(`/play?list=${playlistId}`)
+  const handleStartPlay = async (listId?: string) => {
+    router.push(`/play?list=${listId ?? playlistId}`)
   }
 
-  // 처음 접속 때, 링크 입력칸 포커스
+  
   useEffect(() => {
+    // 처음 접속 때, 링크 입력칸 포커스
     inputRef.current?.focus()
+    resetVideos()
+
+    // 불러왔던 재생목록 저장
+    const data = getAllPlaylists('master')
+    setStoredPlaylists(data)
   },[])
 
   return (
@@ -48,7 +64,7 @@ export default function EditPage() {
         <h1 className="text-3xl font-bold hover:underline">YouTube Playlist Shuffle</h1>
       </nav>
       <div className = "flex flex-col justify-center items-center playground w-screen">
-        <div className="bg-gray-300 w-5/6 h-11/12 p-4 rounded-2xl max-w-7xl">
+        <div className="flex flex-col bg-gray-300 w-5/6 h-11/12 p-4 rounded-2xl max-w-7xl">
           <div className="flex justify-between w-full pb-4 border-b-2 mb-4">
             <div className="url-input">
               <input
@@ -74,7 +90,7 @@ export default function EditPage() {
           {loading && <p>불러오는 중...</p>}
 
           {videos.length > 0 && (
-            <>
+            <div className="pb-4 mb-2 border-b-2">
               <ul className="bg-white border p-4 rounded shadow max-h-[400px] overflow-auto mb-4">
                 {videos.map((video, index) => (
                   <li key={index} className="flex pb-2 mb-2 border-b-[1px]">
@@ -87,13 +103,58 @@ export default function EditPage() {
                 ))}
               </ul>
               <button
-                onClick={handleStartPlay}
+                onClick={() => handleStartPlay()}
                 className="bg-green-400 text-white px-3 py-2 rounded-lg cursor-pointer hover:bg-green-500 hover:shadow text-lg font-bold"
               >
                 ▶️ 셔플 시작
               </button>
-            </>
+            </div>
           )}
+          <div className='grow'>
+            <div className='flex flex-col max-h-1/2 mb-2 border-b-2 pb-2'>
+              <h2 className="text-2xl font-bold mb-2">📂 저장된 재생목록</h2>
+              {Object.keys(storedPlaylists).length === 0 ? (
+                <p className="text-gray-500">저장된 재생목록이 없습니다.</p>
+              ) : (
+                <ul className="space-y-2 overflow-auto">
+                  {Object.entries(storedPlaylists).map(([playlistId, info]) => (
+                    <li
+                      key={playlistId}
+                      className="p-2 rounded flex justify-between transition"
+                    >
+                      <div
+                        className='cursor-pointer'
+                        onClick={() => {
+                          handleStartPlay(playlistId)
+                        }}
+                      >
+                        <p className="font-semibold">{info.title}</p>
+                        <p className="text-sm text-gray-500">{info.description}</p>
+                      </div>
+                        
+                      <div className='flex flex-col justify-center'>
+                        <button
+                          className="material-symbols-outlined cursor-pointer text-red-400 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const confirmed = confirm(`"${info.title}" 재생목록을 삭제할까요?`)
+                            if (confirmed) {
+                              deletePlaylistData('master', playlistId)
+                              const newList = { ...storedPlaylists }
+                              delete newList[playlistId]
+                              setStoredPlaylists(newList)
+                            }
+                          }}
+                        >
+                          do_not_disturb_on
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

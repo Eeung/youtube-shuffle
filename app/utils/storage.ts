@@ -94,10 +94,10 @@ export function saveLastPlayedIndex(userId: string, playlistId: string, index: n
 }
   
 /** chains 규칙 저장 */
-export function saveChains(userId: string, playlistId: string, coupling: number[][]) {
+export function saveChains(userId: string, playlistId: string, chains: number[][]) {
     const user = getUserData(userId)
     if (!user.playlists[playlistId] || playlistId == "") return
-    user.playlists[playlistId].chains = coupling
+    user.playlists[playlistId].chains = chains
     updateUserData(userId, { playlists: { [playlistId]: user.playlists[playlistId] } })
 }
   
@@ -105,4 +105,18 @@ export function saveChains(userId: string, playlistId: string, coupling: number[
 export function getPlaylistData(userId: string, playlistId: string): PlaylistData | null {
     const user = getUserData(userId)
     return user.playlists[playlistId] ?? null
+}
+
+/** 모든 재생목록 데이터 조회 */
+export function getAllPlaylists(userId: string) {
+    const user = getUserData(userId)
+    return user.playlists
+}
+
+export function deletePlaylistData(userId: string, playlistId: string) {
+    const db = loadDB()
+    if (!db[userId]?.playlists?.[playlistId]) return
+
+    delete db[userId].playlists[playlistId]
+    saveDB(db)
 }

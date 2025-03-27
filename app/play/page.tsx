@@ -2,7 +2,8 @@
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from "react";
 import ReactPlayer from 'react-player/youtube'
-import { videos, getPlaylistVideos } from "@/utils/youtube";
+import { useRouter } from 'next/navigation'
+import { videos, getPlaylistVideosOnce } from "@/utils/youtube";
 import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData } from '@/utils/storage'
 
 export default function PlayerPage() {
@@ -13,27 +14,19 @@ export default function PlayerPage() {
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const playerRef = useRef<ReactPlayer | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
+  const router = useRouter()
 
   // 처음 접속하면 실행
   useEffect(() => {
     if (!listIDParam) return
 
     const data = getPlaylistData("master", listIDParam)
-    if(data) {
-      if(videos.length === 0) {
-        LoadPlaylist(data, true)
-      } else {
-        LoadPlaylist(data, false)
-      }
-      return
-    }
+    if(!data) return
+    if(videos.length <= 0)
+      LoadPlaylist(data, true)
+    else
+      LoadPlaylist(data, false)
 
-    try {
-      const shuffeledVideos = shuffleArray( videos.length )
-      setVideoIndexes(shuffeledVideos)
-    } catch (err) {
-      console.error('파싱 오류', err)
-    }
   }, [listIDParam])
 
   // Shuffle 알고리즘
@@ -48,9 +41,11 @@ export default function PlayerPage() {
     return shuffled
   }
 
+  // 비디오 불러온게 없으면 불러오고 섞인 순서와 마지막 재생 인덱스 가져오기
   const LoadPlaylist = async (data : PlaylistData, doGetVideos : boolean) => {
-    if(doGetVideos) await getPlaylistVideos(listIDParam)
-    setVideoIndexes(data.shuffledSequence)
+    if(doGetVideos) await getPlaylistVideosOnce(listIDParam)
+    const list = data.shuffledSequence
+    setVideoIndexes(list.length === 0 ? shuffleArray( videos.length ) : list)
     setCurrentIndex(data.lastPlayed)
   }
 
@@ -124,7 +119,12 @@ export default function PlayerPage() {
   return (
     <div className="w-screen h-screen">
       <nav className="flex justify-between py-2.5 px-3.5 border-b-2">
-        <h1 className="text-3xl font-bold hover:underline">YouTube Playlist Shuffle</h1>
+        <h1 
+          className="text-3xl font-bold hover:underline"
+          onClick={() => router.push('/')}
+        >
+          YouTube Playlist Shuffle
+          </h1>
       </nav>
       <div className = "flex justify-center items-center playground w-screen">
         {videoIndexes.length > 0 ? (
@@ -159,6 +159,12 @@ export default function PlayerPage() {
                   <span className="material-symbols-outlined">arrow_circle_left</span>
                 </div>
                 <div
+                  onClick={() => restartCurrentVideo()}
+                  className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                >
+                  <span className="material-symbols-outlined">not_started</span>
+                </div>
+                <div
                   onClick={() => setIsPlaying(prev => !prev)}
                   className = "flex items-center p-2 hover:bg-green-500 transition-colors rounded-full"
                 >
@@ -169,6 +175,16 @@ export default function PlayerPage() {
                   className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
                 >
                   <span className="material-symbols-outlined">arrow_circle_right</span>
+                </div>
+                <div
+                  onClick={() => {
+                    const reShuffled = shuffleArray( videoIndexes.length )
+                    setVideoIndexes(reShuffled)
+                    setCurrentIndex(0)
+                  }}
+                  className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                >
+                  <span className="material-symbols-outlined">shuffle</span>
                 </div>
               </div>
             </div>
