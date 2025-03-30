@@ -12,6 +12,7 @@ export interface listData {
   description : string
   thumbnail: string
 }
+
 export let videos : VideoData[] = []
 export let playlist : listData = {
   id : "",
@@ -19,6 +20,7 @@ export let playlist : listData = {
   description : "",
   thumbnail: "",
 }
+
 const inFlightFetches: Record<string, Promise<boolean> | undefined> = {};
 
 export async function getPlaylistMeta(playlistId: string) : Promise<listData> {

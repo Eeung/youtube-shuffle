@@ -3,8 +3,8 @@ import "@/globals.css";
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from "react";
 import ReactPlayer from 'react-player/youtube'
-import { videos, getPlaylistVideosOnce } from "@/utils/youtube";
-import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData } from '@/utils/storage'
+import { videos, getPlaylistVideosOnce } from "@/store/youtube";
+import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData, userName } from '@/store/storage'
 import MediaButton from '@/components/MediaButton';
 
 export default function PlayerPage() {
@@ -20,7 +20,7 @@ export default function PlayerPage() {
   useEffect(() => {
     if (!listIDParam) return
 
-    const data = getPlaylistData("master", listIDParam)
+    const data = getPlaylistData(userName, listIDParam)
     if(!data) return
     if(videos.length <= 0)
       LoadPlaylist(data, true)
@@ -37,7 +37,7 @@ export default function PlayerPage() {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    saveShuffledSequence("master", listIDParam, shuffled)
+    saveShuffledSequence(userName, listIDParam, shuffled)
     return shuffled
   }
 
@@ -66,7 +66,7 @@ export default function PlayerPage() {
   useEffect(() => {
 
     // 재생 중 인덱스 출력
-    setTimeout(()=>saveLastPlayedIndex("master", listIDParam, currentIndex),0)
+    setTimeout(()=>saveLastPlayedIndex(userName, listIDParam, currentIndex),0)
 
     // 동적 타이틀
     if (videoIndexes.length > 0) {

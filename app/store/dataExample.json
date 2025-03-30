@@ -4,9 +4,10 @@
             "PL123456789": {
                 "title": "Lo-fi 공부용",
                 "description": "집중할 때 듣는 음악",
+                "thumbnail" : "url",
                 "lastPlayed": 4,
                 "shuffledSequence": [3, 5, 0, 4, 6, 2, 1],
-                "coupling": [[2, 3, 4], [5, 6]]
+                "chians": [[2, 3, 4], [5, 6]]
             }
         },
         "combined": {

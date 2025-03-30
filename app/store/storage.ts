@@ -26,6 +26,7 @@ type FullDB = {
 }
   
 const STORAGE_KEY = 'ytsh_db'
+export const userName = "master"
   
 /** DB 전체 불러오기 */
 export function loadDB(): FullDB {

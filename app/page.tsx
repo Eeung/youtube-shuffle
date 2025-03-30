@@ -1,9 +1,9 @@
 'use client'
 import "@/globals.css";
 import { useEffect, useRef, useState } from 'react'
-import { getPlaylistVideosOnce, getPlaylistMeta, videos, playlist, resetVideos } from '@/utils/youtube'
+import { getPlaylistVideosOnce, getPlaylistMeta, videos, playlist, resetVideos } from '@/store/youtube'
 import { useRouter } from 'next/navigation'
-import { savePlaylistMeta, getPlaylistData, getAllPlaylists, deletePlaylistData } from '@/utils/storage'
+import { savePlaylistMeta, getPlaylistData, getAllPlaylists, deletePlaylistData, saveChains, userName } from '@/store/storage'
 import PlaylistPreviewModal from '@/components/PlaylistPreviewModal'
 
 type StoredPlaylist = {
@@ -32,10 +32,10 @@ export default function EditPage() {
       setPlaylistId(listId)
       setLoading(true)
 
-      let data = getPlaylistData("master", listId)
+      let data = getPlaylistData(userName, listId)
       if(!data){
         setPlaylistInfo(await getPlaylistMeta(listId))
-        savePlaylistMeta("master", listId, playlist.title, playlist.description, playlist.thumbnail)
+        savePlaylistMeta(userName, listId, playlist.title, playlist.description, playlist.thumbnail)
       } else {
         setPlaylistInfo({
           title : data.title,
@@ -186,12 +186,10 @@ export default function EditPage() {
         <PlaylistPreviewModal
           open={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onStartShuffle={() => {
+          onStartShuffle={(chains) => {
             setIsModalOpen(false)
+            saveChains(userName, playlistId, chains)
             handleStartPlay()
-          }}
-          onSetupCoupling={() => {
-            alert("고정 규칙 설정은 추후 업데이트됩니다!")
           }}
           videos={videos}
           title={playlistInfo?.title ?? ""}
