@@ -3,14 +3,18 @@ import "@/globals.css";
 import { useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from "react";
 import ReactPlayer from 'react-player/youtube'
-import { videos, getPlaylistVideosOnce } from "@/store/youtube";
-import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData, userName } from '@/store/storage'
+import { getPlaylistVideosOnce } from "@/store/youtube";
+import { saveShuffledSequence, saveLastPlayedIndex, getPlaylistData, PlaylistData } from '@/store/storage'
 import MediaButton from '@/components/MediaButton';
+import { useUserStore, useVideoStore } from "@/store/useStore";
 
 export default function PlayerPage() {
+  const {userId} = useUserStore()
+  const {videos,setVideos,resetVideos} = useVideoStore()
   const searchParams = useSearchParams()
   const listIDParam = searchParams.get('list') ?? ""
-  const [videoIndexes, setVideoIndexes] = useState<number[]>([])
+  const [shuffledIndexes, setShuffledIndexes] = useState<number[]>([])
+  const [chains, setChains] = useState<number[][]>([])
   const [isPlaying, setIsPlaying] = useState<boolean>(true)
   const [currentIndex, setCurrentIndex] = useState<number>(0)
   const playerRef = useRef<ReactPlayer | null>(null)
@@ -20,7 +24,7 @@ export default function PlayerPage() {
   useEffect(() => {
     if (!listIDParam) return
 
-    const data = getPlaylistData(userName, listIDParam)
+    const data = getPlaylistData(userId, listIDParam)
     if(!data) return
     if(videos.length <= 0)
       LoadPlaylist(data, true)
@@ -30,28 +34,35 @@ export default function PlayerPage() {
   }, [listIDParam])
 
   // Shuffle 알고리즘
-  const shuffleArray = (size: number): number[] => {
-    const shuffled : number[] = [...Array(videos.length).keys()]
+  const shuffleArray = (size: number, chains: number[][]): number[] => {
+    const chainSet = new Set<number>()
+    chains.forEach( (chain) => chain.forEach( index => chainSet.add(index) ) )
+    const numbers : number[] = [...Array(size).keys().filter(e => !chainSet.has(e))]
+    const videosWithChains: (number|number[])[] = [...numbers, ...chains]
+    size = videosWithChains.length
 
     for (let i = size - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
-      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      ;[videosWithChains[i], videosWithChains[j]] = [videosWithChains[j], videosWithChains[i]]
     }
-    saveShuffledSequence(userName, listIDParam, shuffled)
+    let shuffled : number[] = []
+    shuffled = shuffled.concat(...videosWithChains)
+    saveShuffledSequence(userId, listIDParam, shuffled)
     return shuffled
   }
 
   // 비디오 불러온게 없으면 불러오고 섞인 순서와 마지막 재생 인덱스 가져오기
   const LoadPlaylist = async (data : PlaylistData, doGetVideos : boolean) => {
-    if(doGetVideos) await getPlaylistVideosOnce(listIDParam)
+    if(doGetVideos) await getPlaylistVideosOnce(listIDParam,setVideos,resetVideos)
     const list = data.shuffledSequence
-    setVideoIndexes(list.length === 0 ? shuffleArray( videos.length ) : list)
+    setChains(data.chains)
+    setShuffledIndexes(list.length === 0 ? shuffleArray( videos.length, data.chains ) : list)
     setCurrentIndex(data.lastPlayed)
   }
 
   // 영상 끝나면 다음 영상으로
   const handleEnded = () => {
-    const next = (currentIndex + 1) % videoIndexes.length
+    const next = (currentIndex + 1) % shuffledIndexes.length
     setCurrentIndex(next)
   }
 
@@ -66,11 +77,11 @@ export default function PlayerPage() {
   useEffect(() => {
 
     // 재생 중 인덱스 출력
-    setTimeout(()=>saveLastPlayedIndex(userName, listIDParam, currentIndex),0)
+    setTimeout(()=>saveLastPlayedIndex(userId, listIDParam, currentIndex),0)
 
     // 동적 타이틀
-    if (videoIndexes.length > 0) {
-      document.title = `${videos[videoIndexes[currentIndex]].title} - Playlist Shuffle`
+    if (shuffledIndexes.length > 0) {
+      document.title = `${videos[shuffledIndexes[currentIndex]].title} - Playlist Shuffle`
     } else {
       document.title = 'Playlist Shuffle'
     }
@@ -82,18 +93,18 @@ export default function PlayerPage() {
     if (activeItem) {
       activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [videoIndexes, currentIndex])
+  }, [shuffledIndexes, currentIndex])
 
   return (
     <>
-      {videoIndexes.length > 0 ? (  
+      {shuffledIndexes.length > 0 ? (  
         <>
           <section className="player flex flex-col items-center justify-center">
             {/* 유튜브 영상 재생 */}
             <div className="aspect-video mb-1.5 ytplayer">
               <ReactPlayer
                 ref={playerRef}
-                url={`https://www.youtube.com/watch?v=${videos[videoIndexes[currentIndex]].videoId}`}
+                url={`https://www.youtube.com/watch?v=${videos[shuffledIndexes[currentIndex]].videoId}`}
                 playing={isPlaying}
                 controls
                 onEnded={handleEnded}
@@ -114,32 +125,37 @@ export default function PlayerPage() {
                     setCurrentIndex(currentIndex - 1)
                   }
                 }}
-                className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                className = "flex items-center p-2 group-hover:bg-gray-500 transition-colors rounded-full ml-[-50%] mr-[50%]"
                 innerText = "arrow_circle_left"
+                tooltipContent="이전 영상"
               />
               <MediaButton
                 onClick={() => restartCurrentVideo()}
-                className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                className = "flex items-center p-2 group-hover:bg-gray-500 transition-colors rounded-full ml-[-50%] mr-[50%]"
                 innerText = "not_started"
+                tooltipContent="영상 재시작"
               />
               <MediaButton
                 onClick={() => setIsPlaying(prev => !prev)}
-                className = "flex items-center p-2 hover:bg-green-500 transition-colors rounded-full"
+                className = "flex items-center p-2 group-hover:bg-green-500 transition-colors rounded-full ml-[-50%] mr-[50%]"
                 innerText = {isPlaying ? "pause_circle" : "play_circle"}
+                tooltipContent={isPlaying ? "일시정지" : "재생"}
               />
               <MediaButton
-                onClick={() => setCurrentIndex(currentIndex<videoIndexes.length-1? currentIndex+1 : videoIndexes.length-1)}
-                className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                onClick={() => setCurrentIndex(currentIndex<shuffledIndexes.length-1? currentIndex+1 : shuffledIndexes.length-1)}
+                className = "flex items-center p-2 group-hover:bg-gray-500 transition-colors rounded-full ml-[-50%] mr-[50%]"
                 innerText = "arrow_circle_right"
+                tooltipContent="다음 영상"
               />
               <MediaButton
                 onClick={() => {
-                  const reShuffled = shuffleArray( videoIndexes.length )
-                  setVideoIndexes(reShuffled)
+                  const reShuffled = shuffleArray( shuffledIndexes.length, chains )
+                  setShuffledIndexes(reShuffled)
                   setCurrentIndex(0)
                 }}
-                className = "flex items-center p-2 hover:bg-gray-500 transition-colors rounded-full"
+                className = "flex items-center p-2 group-hover:bg-gray-500 transition-colors rounded-full ml-[-50%] mr-[50%]"
                 innerText="shuffle"
+                tooltipContent="재셔플"
               />
             </footer>
           </section>
@@ -149,7 +165,7 @@ export default function PlayerPage() {
               ref={listRef}
               className="w-11/12 h-px grow overflow-auto overflow-x-hidden border rounded-lg p-2 bg-white shadow"
             >
-              {videoIndexes.map((video, index) => {
+              {shuffledIndexes.map((video, index) => {
                 return (
                   <li
                     key={index}
@@ -165,14 +181,14 @@ export default function PlayerPage() {
                       }
                     }}
                   >
-                    <div className="text-sm">{videos[video].title}</div>
+                    <div>{videos[video].title}</div>
                     <div className="text-xs text-gray-500">{videos[video].channelTitle}</div>
                   </li>
                 );
               })}
             </ul>
             <footer className="flex justify-end w-11/12">
-              <p className = "font-bold text-base">{currentIndex+1}/{videoIndexes.length}</p>
+              <p className = "font-bold text-base">{currentIndex+1}/{shuffledIndexes.length}</p>
             </footer>
           </section>
         </>

@@ -2,17 +2,33 @@
     "master": {
         "playlists": {
             "PL123456789": {
-                "title": "Lo-fi 공부용",
-                "description": "집중할 때 듣는 음악",
-                "thumbnail" : "url",
+                "snippet": {
+                    "title": "Lo-fi 공부용",
+                    "description": "공부할 때 듣는 음악",
+                    "thumbnail" : "url"
+                },
                 "lastPlayed": 4,
                 "shuffledSequence": [3, 5, 0, 4, 6, 2, 1],
                 "chians": [[2, 3, 4], [5, 6]]
+            },
+            "PL987654321" :{
+                "snippet":{
+                    "title": "노동요",
+                    "description": "노동할 때 듣는 음악",
+                    "thumbnail" : "url"
+                },
+                "lastPlayed": 4,
+                "shuffledSequence": [1, 3, 0, 2],
+                "chians": []
             }
         },
         "combined": {
             "집중 믹스": {
-                "sources": ["PL123456789", "PL987654321"]
+                "description" : "집중할 때 듣는 음악",
+                "sources": ["PL123456789", "PL987654321"],
+                "lastPlayed": 4,
+                "shuffledSequence": [3, 5, 0, 4, 6, 2, 1, 8, 10, 7, 9],
+                "chians": []
             }
         }
     },

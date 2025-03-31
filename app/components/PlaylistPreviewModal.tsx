@@ -12,6 +12,7 @@ interface PlaylistPreviewModalProps {
   onClose: () => void
   onStartShuffle: (chains: number[][]) => void
   videos: VideoData[]
+  chainProp?: number[][]
   title: string
   description: string
   thumbnail: string
@@ -22,6 +23,7 @@ export default function PlaylistPreviewModal({
   onClose,
   onStartShuffle,
   videos,
+  chainProp,
   title,
   description,
   thumbnail
@@ -35,6 +37,11 @@ export default function PlaylistPreviewModal({
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
+
+    if(chainProp)
+      setChains(chainProp);
+
+
     return () => { document.body.style.overflow = '' }
   }, [open])
 
@@ -73,42 +80,48 @@ export default function PlaylistPreviewModal({
   const handleDragEnd = (result: any) => {
     draggingRef.current = false
     const { source, destination } = result
+
+    const sourceChainIndex = parseInt(source.droppableId)
+    const destinationChainIndex = parseInt(destination.droppableId)
+    const fromChain = [...chains[sourceChainIndex]]
+    // 체인 밖으로 이동
     if (!destination) {
-      handleDragToOut(source)
+      fromChain.splice(source.index, 1)
+    }
+    // 체인 간 이동
+    else if(sourceChainIndex !== destinationChainIndex){
+      const toChain = [...chains[destinationChainIndex]]
+
+      const [moved] = fromChain.splice(source.index, 1)
+      toChain.splice(destination.index, 0, moved)
+      updateChains(fromChain, sourceChainIndex, toChain, destinationChainIndex)
       return
     }
-
-    const chainIndex = parseInt(source.droppableId)
-    const newChain = [...chains[chainIndex]]
-    const [moved] = newChain.splice(source.index, 1)
-    newChain.splice(destination.index, 0, moved)
-    const updated = [...chains]
-    updated[chainIndex] = newChain
-    setChains(updated)
+    // 같은 체인 안에서 이동
+    else {
+      const [moved] = fromChain.splice(source.index, 1)
+      fromChain.splice(destination.index, 0, moved)
+    }
+    updateChains(fromChain, sourceChainIndex)
   }
 
-  const handleDragToOut = (source:any) => {
-    const chainIndex = parseInt(source.droppableId)
-    const newChain = [...chains[chainIndex]]
-    newChain.splice(source.index, 1)
-
+  const updateChains = (sourceChain:any, sourceIndex:number, destinationChain?:any, destinationIndex?:number) => {
     let updated = [...chains]
-    if ((newChain.length>>>1) === 0) {
-      //삭제될 때, 기존 선택된 체인들 인덱스 변경해야함
-      //1,2,5번이 선택될 때, 2번이 삭제되면, 1,4번으로 변경
-      updated.splice(chainIndex, 1)
-
+    if ((sourceChain.length>>>1) === 0) {
+      updated.splice(sourceIndex, 1)
 
       const newSelectedChains = selectedChains
-        .filter(i=> i !== chainIndex)
-        .map(e=> e>chainIndex? e-1: e )
+        .filter(i=> i !== sourceIndex)
+        .map(e=> e>sourceIndex? e-1: e )
       
       setSelectedChains(newSelectedChains)
       
     } else {
-      updated[chainIndex] = newChain
+      updated[sourceIndex] = sourceChain
     }
 
+    if(destinationChain && destinationIndex !== undefined)
+      updated[destinationIndex] = destinationChain
     setChains(updated)
     return
   }
@@ -116,7 +129,7 @@ export default function PlaylistPreviewModal({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
+    <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
       <section className="bg-white rounded-xl p-6 w-[90vw] max-w-3xl max-h-[90vh] overflow-y-auto shadow-lg">
         <header className="flex items-center mb-2">
           <img src={thumbnail} alt="Not Found" className="rounded-full size-12 mr-2" />
@@ -140,12 +153,12 @@ export default function PlaylistPreviewModal({
                   className={`flex justify-between items-center border-b last:border-none py-1 px-2 cursor-pointer rounded ${isSelected ? 'bg-blue-100' : 'hover:bg-gray-100'}`} 
                   onClick={() => handleItemClick(index)}
                 >
-                  <div>
-                    <span className="float-left text-gray-800 text-2xl mr-2 w-fit">{index + 1}</span>
-                    <span className='float-left'>
-                      <div className="text-sm font-semibold">{video.title}</div>
+                  <div className="flex">
+                    <div className="text-gray-800 text-2xl mr-2 w-fit">{index + 1}</div>
+                    <div>
+                      <div className=" font-semibold">{video.title}</div>
                       <div className="text-xs text-gray-500">{video.channelTitle}</div>
-                    </span>
+                    </div>
                   </div>
                   {isSelected && 
                     <span className="text-gray-500 float-right text-lg mr-2 w-fit">{selected.indexOf(index) + 1}</span>
@@ -179,12 +192,12 @@ export default function PlaylistPreviewModal({
                               className="flex items-center border-b last:border-none py-1 px-2 cursor-move bg-white rounded shadow-sm"
                             >
                               <span className="text-gray-400 mr-2">☰</span>
-                              <div>
-                                <span className="float-left text-gray-800 text-2xl mr-2 w-fit">{videoIndex + 1}</span>
-                                <span className='float-left'>
-                                  <div className="text-sm font-semibold">{videos[videoIndex].title}</div>
+                              <div className="flex">
+                                <div className="text-gray-800 text-2xl mr-2 w-fit">{videoIndex + 1}</div>
+                                <div>
+                                  <div className="font-semibold">{videos[videoIndex].title}</div>
                                   <div className="text-xs text-gray-500">{videos[videoIndex].channelTitle}</div>
-                                </span>
+                                </div>
                               </div>
                             </li>
                           )}
@@ -239,7 +252,7 @@ export default function PlaylistPreviewModal({
               } 
               className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
             >
-              셔플 시작
+              확인
             </button>
             <button 
               onClick={onClose} 
@@ -249,6 +262,9 @@ export default function PlaylistPreviewModal({
             </button>
           </div>
         </footer>
+        {viewChains &&
+          <p className="flex justify-center text-sm text-gray-500 mb-[-20px]">변경된 고정 순서를 적용하려면, 재셔플을 해야 합니다.</p>
+        }
       </section>
     </div>
   )

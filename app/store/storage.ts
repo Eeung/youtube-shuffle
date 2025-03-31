@@ -1,7 +1,11 @@
-export type PlaylistData = {
+export type PlaylistInfo = {
     title: string
     description: string
     thumbnail: string
+}
+
+export type PlaylistData = {
+    snippet : PlaylistInfo
     lastPlayed: number
     shuffledSequence: number[]
     chains: number[][]
@@ -26,7 +30,6 @@ type FullDB = {
 }
   
 const STORAGE_KEY = 'ytsh_db'
-export const userName = "master"
   
 /** DB 전체 불러오기 */
 export function loadDB(): FullDB {
@@ -64,16 +67,12 @@ export function updateUserData(userId: string, newData: Partial<UserData>) {
 export function savePlaylistMeta(
     userId: string,
     playlistId: string,
-    title: string,
-    description: string,
-    thumbnail: string
+    snippet: PlaylistInfo
 ) {
     if(playlistId == "") return
     const user = getUserData(userId)
     user.playlists[playlistId] ??= {
-        title,
-        description,
-        thumbnail,
+        snippet,
         lastPlayed: 0,
         shuffledSequence: [],
         chains: [],

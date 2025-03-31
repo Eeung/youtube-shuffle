@@ -1,3 +1,5 @@
+import { PlaylistInfo } from "./storage";
+
 const API_KEY = "AIzaSyD1ke6FFlpLgjTYgy5PAq8nPMhCtnRIivs"; // youtube api key
 
 export interface VideoData {
@@ -6,24 +8,9 @@ export interface VideoData {
   channelTitle: string
 }
 
-export interface listData {
-  id : string
-  title : string
-  description : string
-  thumbnail: string
-}
-
-export let videos : VideoData[] = []
-export let playlist : listData = {
-  id : "",
-  title : "",
-  description : "",
-  thumbnail: "",
-}
-
 const inFlightFetches: Record<string, Promise<boolean> | undefined> = {};
 
-export async function getPlaylistMeta(playlistId: string) : Promise<listData> {
+export async function getPlaylistMeta(playlistId: string) : Promise<PlaylistInfo> {
   const url = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
 
   const res = await fetch(url)
@@ -33,20 +20,23 @@ export async function getPlaylistMeta(playlistId: string) : Promise<listData> {
   const item = data.items?.[0]
   if (!item) throw new Error('플레이리스트가 존재하지 않습니다.')
 
-  return playlist = {
-    id: playlistId,
+  return {
     title: item.snippet.title,
     description: item.snippet.description,
     thumbnail: item.snippet.thumbnails.default.url
   }
 }
 
-export function getPlaylistVideosOnce(listId: string): Promise<boolean> {
+export function getPlaylistVideosOnce(
+  listId: string,
+  setVideos: (videos: VideoData[]) => void,
+  resetVideos: () => void
+): Promise<boolean> {
   if (inFlightFetches[listId]) {
     return inFlightFetches[listId]; // 이미 실행 중이면 그걸 그대로 반환
   }
 
-  const promise = getPlaylistVideos(listId).finally(() => {
+  const promise = getPlaylistVideos(listId,setVideos,resetVideos).finally(() => {
     delete inFlightFetches[listId]; // 끝나면 캐시 제거
   });
 
@@ -54,10 +44,15 @@ export function getPlaylistVideosOnce(listId: string): Promise<boolean> {
   return promise;
 }
 
-async function getPlaylistVideos(playlistId: string) : Promise<boolean>{
+async function getPlaylistVideos(
+  playlistId: string,
+  setVideos: (videos: VideoData[]) => void,
+  resetVideos: () => void
+) : Promise<boolean>{
   const maxResults = 50
   let nextPageToken = ''
-  videos = []
+  const fetched : VideoData[] = []
+  resetVideos()
 
   while (true) {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${maxResults}&playlistId=${playlistId}&key=${API_KEY}&pageToken=${nextPageToken}`
@@ -79,15 +74,11 @@ async function getPlaylistVideos(playlistId: string) : Promise<boolean>{
       })
       .filter(Boolean)
       
-      videos.push(...newVideos)
+      fetched.push(...newVideos)
 
     if (!data.nextPageToken) break
     nextPageToken = data.nextPageToken
   }
-  //videos = fetchedVideos
+  setVideos(fetched)
   return true
-}
-
-export function resetVideos() {
-  videos = []
 }

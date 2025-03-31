@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @tailwind utilities;
 
+:root{
+    --ytplayerWidth : calc(76.38vw - 29.33px)
+}
+
 body {
     -webkit-user-select:none;
     -moz-user-select:none;
@@ -25,6 +29,7 @@ iframe {
 }
 
 .ytplayer {
+    width: min(var(--ytplayerWidth), calc(66.15vh - 46px));
     max-width: 800px;
     max-height: 450px;
 }
@@ -39,10 +44,10 @@ iframe {
 }
 @media (min-Height: 635px){
     .player {
-        @apply h-1/2
+        @apply max-h-1/2
     }
     article {
-        @apply py-4
+        @apply py-2.5
     }
 }
 
