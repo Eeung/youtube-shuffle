@@ -1,21 +1,15 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-
-interface VideoData {
-  title: string
-  channelTitle: string
-}
+import { VideoData } from '@/store/youtube'
+import { PlaylistData } from '@/store/storage'
 
 interface PlaylistPreviewModalProps {
   open: boolean
   onClose: () => void
   onStartShuffle: (chains: number[][]) => void
   videos: VideoData[]
-  chainProp?: number[][]
-  title: string
-  description: string
-  thumbnail: string
+  playlistData : PlaylistData
 }
 
 export default function PlaylistPreviewModal({
@@ -23,10 +17,7 @@ export default function PlaylistPreviewModal({
   onClose,
   onStartShuffle,
   videos,
-  chainProp,
-  title,
-  description,
-  thumbnail
+  playlistData
 }: PlaylistPreviewModalProps) {
   const [selected, setSelected] = useState<number[]>([])
   const [selectedChains, setSelectedChains] = useState<number[]>([])
@@ -38,9 +29,8 @@ export default function PlaylistPreviewModal({
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
 
-    if(chainProp)
-      setChains(chainProp);
-
+    if(playlistData.chains)
+      setChains(playlistData.chains)
 
     return () => { document.body.style.overflow = '' }
   }, [open])
@@ -82,14 +72,16 @@ export default function PlaylistPreviewModal({
     const { source, destination } = result
 
     const sourceChainIndex = parseInt(source.droppableId)
-    const destinationChainIndex = parseInt(destination.droppableId)
     const fromChain = [...chains[sourceChainIndex]]
     // 체인 밖으로 이동
     if (!destination) {
       fromChain.splice(source.index, 1)
+      updateChains(fromChain, sourceChainIndex)
+      return
     }
+    const destinationChainIndex = parseInt(destination.droppableId)
     // 체인 간 이동
-    else if(sourceChainIndex !== destinationChainIndex){
+    if(sourceChainIndex !== destinationChainIndex){
       const toChain = [...chains[destinationChainIndex]]
 
       const [moved] = fromChain.splice(source.index, 1)
@@ -98,10 +90,8 @@ export default function PlaylistPreviewModal({
       return
     }
     // 같은 체인 안에서 이동
-    else {
-      const [moved] = fromChain.splice(source.index, 1)
-      fromChain.splice(destination.index, 0, moved)
-    }
+    const [moved] = fromChain.splice(source.index, 1)
+    fromChain.splice(destination.index, 0, moved)
     updateChains(fromChain, sourceChainIndex)
   }
 
@@ -132,10 +122,10 @@ export default function PlaylistPreviewModal({
     <div className="fixed inset-0 z-40 bg-[rgba(0,0,0,0.5)] flex items-center justify-center">
       <section className="bg-white rounded-xl p-6 w-[90vw] max-w-3xl max-h-[90vh] overflow-y-auto shadow-lg">
         <header className="flex items-center mb-2">
-          <img src={thumbnail} alt="Not Found" className="rounded-full size-12 mr-2" />
+          <img src={playlistData.snippet.thumbnail} alt="Not Found" className="rounded-full size-12 mr-2" />
           <div>
-            <h2 className="text-2xl font-bold mb-1">{title}</h2>
-            <p className="text-sm text-gray-500">{description}</p>
+            <h2 className="text-2xl font-bold mb-1">{playlistData.snippet.title}</h2>
+            <p className="text-sm text-gray-500">{playlistData.snippet.description}</p>
           </div>
         </header>
 
@@ -238,14 +228,14 @@ export default function PlaylistPreviewModal({
             </button>
           </div>
           <div className="^RIGHT^ flex gap-2">
-            <button 
+            {/* <button 
               onClick={() => {
                 //onSetupChains(chains)
               }} 
               className="text-sm bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
             >
               일반 재생
-            </button>
+            </button> */}
             <button 
               onClick={() => 
                 onStartShuffle(chains)

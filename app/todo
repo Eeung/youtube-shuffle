@@ -1,8 +1,26 @@
-플레이어 페이지에서도 체인 변경을 가능하게 해야함.
-다음 영상부터 셔플 기능 추가
+Bug(개발자) List:
+전반적인 체인 추가/삭제 후 셔플
+
+To Do List:
+재생목록 설명 설정
+비공개 동영상 필터링
+반복 재생
+고정순서에 영상 추가/삭제 버튼 추가 고려
+셔플없이 재생 추가(<span className="material-symbols-outlined">replace_audio</span>)
+다음 영상부터 셔플 기능 추가(<span className="material-symbols-outlined">arrow_split</span>)
 재생목록 리스트 앞에 썸내일 추가
 체인 내부에서 섞기 기능
 
 재생목록 합치기 기능 구현
 
 소셜로그인 + db연동
+
+
+
+재생목록 편집(자유도 높게){
+    재생목록 합체
+    영상 몇 개 빼고 재생
+
+    내부 구역 설정
+    구역 당 재생 옵션 제공(예: A구역 일반 재생, B구역 셔플, C구역 일반)
+}

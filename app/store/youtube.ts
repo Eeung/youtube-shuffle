@@ -8,7 +8,7 @@ export interface VideoData {
   channelTitle: string
 }
 
-const inFlightFetches: Record<string, Promise<boolean> | undefined> = {};
+const inFlightFetches: Record<string, Promise<VideoData[]> | undefined> = {};
 
 export async function getPlaylistMeta(playlistId: string) : Promise<PlaylistInfo> {
   const url = `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
@@ -27,16 +27,12 @@ export async function getPlaylistMeta(playlistId: string) : Promise<PlaylistInfo
   }
 }
 
-export function getPlaylistVideosOnce(
-  listId: string,
-  setVideos: (videos: VideoData[]) => void,
-  resetVideos: () => void
-): Promise<boolean> {
+export function getPlaylistVideosOnce(listId: string): Promise<VideoData[]> {
   if (inFlightFetches[listId]) {
     return inFlightFetches[listId]; // 이미 실행 중이면 그걸 그대로 반환
   }
 
-  const promise = getPlaylistVideos(listId,setVideos,resetVideos).finally(() => {
+  const promise = getPlaylistVideos(listId).finally(() => {
     delete inFlightFetches[listId]; // 끝나면 캐시 제거
   });
 
@@ -44,15 +40,10 @@ export function getPlaylistVideosOnce(
   return promise;
 }
 
-async function getPlaylistVideos(
-  playlistId: string,
-  setVideos: (videos: VideoData[]) => void,
-  resetVideos: () => void
-) : Promise<boolean>{
+async function getPlaylistVideos(playlistId: string) : Promise<VideoData[]>{
   const maxResults = 50
   let nextPageToken = ''
   const fetched : VideoData[] = []
-  resetVideos()
 
   while (true) {
     const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${maxResults}&playlistId=${playlistId}&key=${API_KEY}&pageToken=${nextPageToken}`
@@ -79,6 +70,5 @@ async function getPlaylistVideos(
     if (!data.nextPageToken) break
     nextPageToken = data.nextPageToken
   }
-  setVideos(fetched)
-  return true
+  return fetched
 }

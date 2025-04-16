@@ -1,24 +1,22 @@
 'use client'
-import "@/globals.css";
+import "@/globals.css"
 import { useEffect, useRef, useState } from 'react'
-import { getPlaylistVideosOnce, getPlaylistMeta } from '@/store/youtube'
+import { getPlaylistMeta } from '@/store/youtube'
 import { useRouter } from 'next/navigation'
-import { savePlaylistMeta, getPlaylistData, getAllPlaylists, deletePlaylistData, saveChains, PlaylistData } from '@/store/storage'
+import { savePlaylistMeta, getPlaylistData, deletePlaylistData, saveChains } from '@/store/storage'
 import PlaylistPreviewModal from '@/components/PlaylistPreviewModal'
-import { useUserStore, useVideoStore } from "./store/useStore";
-import Tekkai from "./components/Tekkai";
-import MediaButton from "./components/MediaButton";
-import Tooltip from "./components/Tooltip";
+import { useUserStore, useVideoStore } from "./store/useStore"
+import Tekkai from "./components/Tekkai"
+import MediaButton from "./components/MediaButton"
 
 export default function EditPage() {
-  const {userId} = useUserStore()
-  const {videos,setVideos,resetVideos} = useVideoStore()
+  const {userId, playlists, loadPlaylists} = useUserStore()
+  const {videos,loadVideos,resetVideos} = useVideoStore()
   const [url, setUrl] = useState("")
   const [loading, setLoading] = useState<boolean>(false)
   const [playlistId, setPlaylistId] = useState<string>("")
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const [storedPlaylists, setStoredPlaylists] = useState<Record<string, PlaylistData>>({})
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -26,9 +24,8 @@ export default function EditPage() {
     inputRef.current?.focus()
     resetVideos()
 
-    // 불러왔던 재생목록 저장
-    const data = getAllPlaylists('master')
-    setStoredPlaylists(data)
+    // 불러왔던 재생목록 로드
+    loadPlaylists()
 
     const summarys = document.querySelectorAll("summary")
     if(!summarys) return
@@ -50,19 +47,7 @@ export default function EditPage() {
           detail.classList.remove("closing") // remove the animation
         }
       })
-  })
-
-  // const testData : (number|number[])[] = [1,2,[3,7,5],4,[6,8],9,10]
-  // const size = testData.length
-  // for(let n=0;n<5;n++){
-  //   for (let i = size - 1; i > 0; i--) {
-  //     const j = Math.floor(Math.random() * (i + 1))
-  //     ;[testData[i], testData[j]] = [testData[j], testData[i]]
-  //   }
-  //   let flat : (number|number[])[] = []
-  //   flat = flat.concat(...testData)
-  //   console.log(JSON.stringify(flat))
-  // }
+    })
   },[])
 
   // 재생목록의 정보를 가져오기
@@ -77,19 +62,14 @@ export default function EditPage() {
 
       let data = getPlaylistData(userId, listId)
       if(!data){
-        let info = {
-          snippet: await getPlaylistMeta(listId),
-          lastPlayed : 0,
-          shuffledSequence : [],
-          chains: []
-        }
-        savePlaylistMeta(userId, listId, info.snippet)
-        setStoredPlaylists({...storedPlaylists, [listId]:info})
+        let info = await getPlaylistMeta(listId)
+        savePlaylistMeta(userId, listId, info)
+        loadPlaylists()
       }
 
-      await getPlaylistVideosOnce(listId,setVideos,resetVideos)
+      await loadVideos(listId)
 
-      setIsModalOpen(true);
+      setIsModalOpen(true)
     } catch (err) {}
     finally {
       setLoading(false)
@@ -137,11 +117,11 @@ export default function EditPage() {
             <summary className="flex flex-row-reverse items-center max-w-fit mb-2 cursor-pointer">
               <h2 className="inline-block text-2xl font-bold">📂 저장된 재생목록</h2>
             </summary>
-            {Object.keys(storedPlaylists).length === 0 ? (
+            {Object.keys(playlists).length === 0 ? (
               <p className="text-gray-500">저장된 재생목록이 없습니다.</p>
             ) : (
               <ul className="space-y-2 overflow-auto">
-                {Object.entries(storedPlaylists).map(([playlistId, info]) => (
+                {Object.entries(playlists).map(([playlistId, info]) => (
                   <li
                     key={playlistId}
                     className="p-2 rounded flex justify-between transition"
@@ -164,9 +144,7 @@ export default function EditPage() {
                           if (!confirmed) return
 
                           deletePlaylistData('master', playlistId)
-                          const newList = { ...storedPlaylists }
-                          delete newList[playlistId]
-                          setStoredPlaylists(newList)
+                          loadPlaylists()
                         }}
                         innerText="do_not_disturb_on"
                         tooltipContent="재생목록 삭재"
@@ -198,10 +176,7 @@ export default function EditPage() {
             handleStartPlay()
           }}
           videos={videos}
-          chainProp={storedPlaylists[playlistId].chains}
-          title={storedPlaylists[playlistId].snippet.title}
-          description={storedPlaylists[playlistId].snippet.description}
-          thumbnail={storedPlaylists[playlistId].snippet.thumbnail}
+          playlistData={playlists[playlistId]}
         />
       }
     </>

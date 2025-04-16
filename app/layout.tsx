@@ -1,8 +1,8 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import { Geist, Geist_Mono } from "next/font/google"
+import "./globals.css"
 import { ReactNode } from 'react'
-import Navigation from "./components/navigation";
-import MainSection from "./components/MainSection";
+import Navigation from "./components/navigation"
+import MainSection from "./components/MainSection"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
